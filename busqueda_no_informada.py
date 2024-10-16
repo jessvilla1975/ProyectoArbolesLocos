@@ -29,15 +29,15 @@ def dibujar_arbol(arbol, nodo_actual, path=[]):
     for nodo in arbol:
         if arbol[nodo]:
             for hijo in arbol[nodo]:
-                G.add_edge(nodo, hijo)
+                G.add_edge(str(nodo), str(hijo))
 
     for nodo in G.nodes():
         G.get_node(nodo).attr['label'] = nodo
         G.get_node(nodo).attr['shape'] = 'ellipse'
 
-        if nodo in path:
+        if str(nodo) in [str(p) for p in path]:
             G.get_node(nodo).attr['color'] = 'green'
-        elif nodo == nodo_actual:
+        elif str(nodo) == str(nodo_actual):
             G.get_node(nodo).attr['color'] = 'red'
         else:
             G.get_node(nodo).attr['color'] = 'lightblue'

@@ -187,20 +187,14 @@ class InterfazLaberinto:
         photo = ImageTk.PhotoImage(imagen)
         self.canvas_arbol.delete("all")
         self.canvas_arbol.create_image(300, 350, image=photo)
-        self.canvas_arbol.image = photo
+        self.canvas_arbol.image = photo  # Mantén una referencia
         self.root.update()
         time.sleep(0.5)
 
     def actualizar_estrategia(self, nombre_estrategia):
-        def update():
-            try:
-                if self.label_estrategia.winfo_exists():
-                    self.label_estrategia.config(text=f"Estrategia actual: {nombre_estrategia}")
-                    self.root.update_idletasks()
-            except tk.TclError:
-                print(f"No se pudo actualizar la etiqueta de estrategia: {nombre_estrategia}")
-
-        self.root.after(0, update)
+        self.label_estrategia.config(text=f"Estrategia actual: {nombre_estrategia}")
+        self.root.update()
+        
 
     def iniciar_busqueda(self):
         nodos_expandir = int(self.entrada_nodos.get())
@@ -221,7 +215,6 @@ class InterfazLaberinto:
             else:
                 messagebox.showwarning("Fallo", "No se encontró una ruta.")
 
-        # Ejecutamos la búsqueda en un hilo separado
         self.root.after(0, run_search)
 
      
