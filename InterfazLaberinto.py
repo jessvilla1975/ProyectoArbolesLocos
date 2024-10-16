@@ -206,8 +206,14 @@ class InterfazLaberinto:
         nodos_expandir = int(self.entrada_nodos.get())
         
         def run_search():
-            ruta = buscar_ruta(self.matriz, self.posicion_raton, self.posicion_queso, 
-                               self.actualizar_arbol, self.actualizar_estrategia, nodos_expandir)
+            ruta = buscar_ruta(
+                self.matriz,
+                self.posicion_raton,
+                self.posicion_queso,
+                self.actualizar_arbol,
+                self.actualizar_estrategia,
+                nodos_expandir
+            )
             
             if ruta:
                 self.pintar_ruta(ruta)
@@ -217,6 +223,7 @@ class InterfazLaberinto:
 
         # Ejecutamos la búsqueda en un hilo separado
         self.root.after(0, run_search)
+
      
     def pintar_ruta(self, ruta):
         for (fila, columna) in ruta:

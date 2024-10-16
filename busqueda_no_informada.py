@@ -50,7 +50,9 @@ def dibujar_arbol(arbol, nodo_actual, path=[]):
 
     return Image.open(buf)
 
-def amplitud(matriz, nodo_inicial, posicion_queso, arbol, actualizar_arbol_callback, actualizar_estrategia_callback, nodos_expandir, visited, parent):
+# Busqueda por amplitud --------------------------------------------------------------------------------------------------------------
+
+def amplitud(matriz, nodo_inicial, posicion_queso, arbol, actualizar_arbol_callback, actualizar_estrategia_callback, nodos_expandir, visited, padre):
     filas, columnas = len(matriz), len(matriz[0])
     graph = nx.grid_2d_graph(filas, columnas)
 
@@ -63,91 +65,115 @@ def amplitud(matriz, nodo_inicial, posicion_queso, arbol, actualizar_arbol_callb
     count = 1
 
     while queue and count < nodos_expandir:
-        current_node = queue.popleft()
+        nodo_actual = queue.popleft()
         
-        if current_node not in visited:
-            visited.add(current_node)
+        if nodo_actual not in visited:
+            visited.add(nodo_actual)
 
-            for neighbor in graph.neighbors(current_node):
-                if neighbor not in visited and neighbor not in queue:
-                    queue.append(neighbor)
-                    parent[neighbor] = current_node  # Actualizamos el parent
-                    if current_node in arbol:
-                        arbol[current_node].append(neighbor)
+            for vecino in graph.neighbors(nodo_actual):
+                if vecino not in visited and vecino not in queue:
+                    queue.append(vecino)
+                    padre[vecino] = nodo_actual  # Actualizamos el parent
+                    if nodo_actual in arbol:
+                        arbol[nodo_actual].append(vecino)
                     else:
-                        arbol[current_node] = [neighbor]
+                        arbol[nodo_actual] = [vecino]
 
-                    img = dibujar_arbol(arbol, neighbor)
+                    img = dibujar_arbol(arbol, vecino)
                     actualizar_arbol_callback(img)
                     time.sleep(0.5)
 
             count += 1
 
-            if current_node == posicion_queso:
+            if nodo_actual == posicion_queso:
                 path = []
-                while current_node is not None:
-                    path.append(current_node)
-                    current_node = parent[current_node]
+                while nodo_actual is not None:
+                    path.append(nodo_actual)
+                    nodo_actual = padre[nodo_actual]
                 img = dibujar_arbol(arbol, None, path=path[::-1])
                 actualizar_arbol_callback(img)
-                return path[::-1], visited, parent  # Devolvemos `parent` actualizado
+                return path[::-1], visited, padre  # Devolvemos `parent` actualizado
 
-    return [nodo_inicial] + list(queue), visited, parent
+    return None, visited, padre
 
 
-def estrategia2(matriz, nodo_inicial, posicion_queso, arbol, actualizar_arbol_callback, actualizar_estrategia_callback, nodos_expandir, visited, parent):
+# Busquedad por profundización iterativa --------------------------------------------------------------------------------------------
+# Aqui para poder poner un limite, uso nodos a expandir para que se expanda hasta esa profundidad
+# falta corregir para que tome de nodo padre el ultimo nodo visitado de la anterior estrategia si hay una antes de esta estrategia
+def Profundidad_Iteractiva(matriz, nodo_inicial, posicion_queso, arbol, actualizar_arbol_callback, actualizar_estrategia_callback, nodos_expandir, visitados=None, padre=None):
     filas, columnas = len(matriz), len(matriz[0])
     graph = nx.grid_2d_graph(filas, columnas)
 
+    # Eliminar nodos que son obstáculos
     for i in range(filas):
         for j in range(columnas):
             if matriz[i][j] == 1:
                 graph.remove_node((i, j))
 
-    queue = deque([nodo_inicial])
-    count = 1
+    max_profundidad = 0
 
-    while queue and count < nodos_expandir:
-        current_node = queue.popleft()
-        
-        if current_node not in visited:
-            visited.add(current_node)
+    if visitados is None:
+        visitados = set()
+    if padre is None:
+        padre = {nodo_inicial: None}
 
-            for neighbor in graph.neighbors(current_node):
-                if neighbor not in visited and neighbor not in queue:
-                    queue.append(neighbor)
-                    parent[neighbor] = current_node  # Actualizamos el parent
-                    if current_node in arbol:
-                        arbol[current_node].append(neighbor)
-                    else:
-                        arbol[current_node] = [neighbor]
+    while max_profundidad <= nodos_expandir:
+        arbol = {nodo_inicial: []}
+        visitados = set()
+        queue = deque([(nodo_inicial, 0)])
 
-                    img = dibujar_arbol(arbol, neighbor)
-                    actualizar_arbol_callback(img)
-                    time.sleep(0.5)
+        while queue:
+            nodo_actual, profundidad_actual = queue.popleft()
 
-            count += 1
-
-            if current_node == posicion_queso:
+            if nodo_actual == posicion_queso:
                 path = []
-                while current_node is not None:
-                    path.append(current_node)
-                    current_node = parent[current_node]
-                img = dibujar_arbol(arbol, None, path=path[::-1])
+                while nodo_actual is not None:
+                    path.append(nodo_actual)
+                    nodo_actual = padre[nodo_actual]
+                path.reverse()
+                img = dibujar_arbol(arbol, None, path=path)
                 actualizar_arbol_callback(img)
-                return path[::-1], visited, parent  # Devolvemos `parent` actualizado
+                return path, visitados, padre
 
-    return [nodo_inicial] + list(queue), visited, parent
+            if profundidad_actual > max_profundidad:
+                continue
 
+            if nodo_actual not in visitados:
+                visitados.add(nodo_actual)
+
+                # Actualizar el árbol con el nodo actual
+                if nodo_actual not in arbol:
+                    arbol[nodo_actual] = []
+
+                # Obtener los vecinos del nodo actual
+                vecinos = list(graph.neighbors(nodo_actual))
+
+                for vecino in vecinos:
+                    if vecino not in visitados:
+                        queue.append((vecino, profundidad_actual + 1))
+                        padre[vecino] = nodo_actual
+                        arbol[nodo_actual].append(vecino)
+
+                # Dibuja el árbol en la profundidad actual
+                img = dibujar_arbol(arbol, nodo_actual)
+                actualizar_arbol_callback(img)
+                time.sleep(0.5)
+
+        max_profundidad += 1
+        print(f"Profundidad actual: {max_profundidad}")
+
+    print("No se encontró un camino hasta el queso en la profundidad máxima permitida.")
+    return None, visitados, padre
 
 
 def buscar_ruta(matriz, posicion_raton, posicion_queso, actualizar_arbol_callback, actualizar_estrategia_callback, nodos_expandir):
-    estrategias = [amplitud, estrategia2]  # Lista de estrategias
+    estrategias = [amplitud, Profundidad_Iteractiva]  # Lista de estrategias 
+
     arbol = {posicion_raton: []}
     nodo_actual = posicion_raton
     path = [nodo_actual]
     visited = set()
-    parent = {nodo_actual: None}  # Mapa de padres global para todas las estrategias
+    padre = {nodo_actual: None}  # Mapa de padres global para todas las estrategias
 
     while nodo_actual != posicion_queso:
         if not estrategias:
@@ -161,8 +187,8 @@ def buscar_ruta(matriz, posicion_raton, posicion_queso, actualizar_arbol_callbac
         print(f"Estrategia actual: {nombre_estrategia}")
         
         # Pasamos `parent` para que las estrategias mantengan el árbol de padres correctamente
-        resultado, visited, parent = estrategia(matriz, nodo_actual, posicion_queso, arbol, actualizar_arbol_callback, actualizar_estrategia_callback, nodos_expandir, visited, parent)
-        
+        resultado, visited, padre = estrategia(matriz, nodo_actual, posicion_queso, arbol, actualizar_arbol_callback, actualizar_estrategia_callback, nodos_expandir, visited, padre)
+
         if resultado:
             if resultado[-1] == posicion_queso:
                 path.extend(resultado[1:])  # Agregar todos los nodos visitados a la ruta
@@ -175,17 +201,16 @@ def buscar_ruta(matriz, posicion_raton, posicion_queso, actualizar_arbol_callbac
 
     return None
 
-
 if __name__ == "__main__":
     matriz, posicion_raton, posicion_queso = cargar_matriz("laberinto.txt")
 
     if posicion_raton is None or posicion_queso is None:
         print("Error: No se encontró la posición del ratón o del queso.")
     else:
-        nodos_expandir = 2  # Este valor puede ser configurado desde la interfaz
+        nodos_expandir = 6# Este valor puede ser configurado desde la interfaz pongo 6 por pruebas aqui sin interface
         ruta = buscar_ruta(matriz, posicion_raton, posicion_queso, lambda x: None, lambda x: None, nodos_expandir)
 
         if ruta:
             print("Ruta encontrada:", ruta)
         else:
-            print("No se encontró un camino.")
+            print("No se encontró una ruta al queso.")
