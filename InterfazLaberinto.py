@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import messagebox
 from PIL import Image, ImageTk
-from busqueda_no_informada import buscar_ruta
+from estrategias import buscar_ruta
 import time
 
 class InterfazLaberinto:
@@ -60,7 +60,11 @@ class InterfazLaberinto:
 
         self.boton_buscar = tk.Button(self.frame_entrada, text="Iniciar Búsqueda", command=self.iniciar_busqueda, font=("Arial", 12))
         self.boton_buscar.pack(pady=10)
-        
+
+        # Botón para limpiar la matriz
+        self.boton_limpiar = tk.Button(self.frame_entrada, text="Limpiar", command=self.limpiar_matriz, font=("Arial", 12))
+        self.boton_limpiar.place(x=self.boton_buscar.winfo_x() + self.boton_buscar.winfo_width() + 260, y=self.boton_buscar.winfo_y()+390)
+
         self.nodos_expandidos = tk.IntVar(value=0)
         self.label_nodos = tk.Label(root, textvariable=self.nodos_expandidos)
         self.label_nodos.pack()
@@ -122,6 +126,21 @@ class InterfazLaberinto:
                 boton_celda = tk.Button(self.frame_matriz, width=4, height=2, bg="white", command=lambda x=i, y=j: self.accion_celda(x, y))
                 boton_celda.grid(row=i, column=j, padx=1, pady=1)
                 self.matriz[i][j] = 0
+
+    def limpiar_matriz(self):
+        filas = len(self.matriz)
+        columnas = len(self.matriz[0])
+        
+        for i in range(filas):
+            for j in range(columnas):
+                boton_celda = self.frame_matriz.grid_slaves(row=i, column=j)[0]
+                boton_celda.config(bg="white", image="", width=4, height=2)
+                self.matriz[i][j] = 0
+        
+        self.nodos_expandidos.set(0)
+        messagebox.showinfo("Limpiar Matriz", "Todas las celdas han sido limpiadas.")
+
+
 
     def accion_celda(self, fila, columna):
         if self.modo_obstaculo_activo:
@@ -187,14 +206,20 @@ class InterfazLaberinto:
         photo = ImageTk.PhotoImage(imagen)
         self.canvas_arbol.delete("all")
         self.canvas_arbol.create_image(300, 350, image=photo)
-        self.canvas_arbol.image = photo  # Mantén una referencia
+        self.canvas_arbol.image = photo
         self.root.update()
         time.sleep(0.5)
 
     def actualizar_estrategia(self, nombre_estrategia):
-        self.label_estrategia.config(text=f"Estrategia actual: {nombre_estrategia}")
-        self.root.update()
-        
+        def update():
+            try:
+                if self.label_estrategia.winfo_exists():
+                    self.label_estrategia.config(text=f"Estrategia actual: {nombre_estrategia}")
+                    self.root.update_idletasks()
+            except tk.TclError:
+                print(f"No se pudo actualizar la etiqueta de estrategia: {nombre_estrategia}")
+
+        self.root.after(0, update)
 
     def iniciar_busqueda(self):
         nodos_expandir = int(self.entrada_nodos.get())
@@ -215,6 +240,7 @@ class InterfazLaberinto:
             else:
                 messagebox.showwarning("Fallo", "No se encontró una ruta.")
 
+        # Ejecutamos la búsqueda en un hilo separado
         self.root.after(0, run_search)
 
      
