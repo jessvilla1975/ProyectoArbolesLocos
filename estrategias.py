@@ -6,6 +6,7 @@ from io import BytesIO
 from PIL import Image, ImageTk
 import time
 import random
+import heapq
 
 def cargar_matriz(archivo):
     with open(archivo, 'r') as f:
@@ -273,3 +274,46 @@ if __name__ == "__main__":
             print("Ruta encontrada:", ruta)
         else:
             print("No se encontró una ruta al queso.")
+
+# Busqueda por costo uniforme --------------------------------------------------------------------------------------
+
+def busqueda_por_costo_uniforme(matriz, nodo_inicial, posicion_queso, arbol, actualizar_arbol_callback, actualizar_estrategia_callback, nodos_expandir, visited, parent):
+    filas, columnas = len(matriz), len(matriz[0])
+    graph = nx.grid_2d_graph(filas, columnas)
+
+    for i in range(filas):
+        for j in range(columnas):
+            if matriz[i][j] == 1:  # 1 representa un obstáculo en la matriz
+                graph.remove_node((i, j))
+
+    queue = []
+    heapq.heappush(queue, (0, nodo_inicial))  # (costo_acumulado, nodo)
+    costs = {nodo_inicial: 0}
+    parent[nodo_inicial] = None
+
+    while queue:
+        current_cost, current_node = heapq.heappop(queue)
+
+        if current_node == posicion_queso:
+            path = []
+            while current_node is not None:
+                path.append(current_node)
+                current_node = parent[current_node]
+            path.reverse()
+            return path, visited, parent
+
+        visited.add(current_node)
+
+        # Expandir nodos vecinos
+        for neighbor in graph.neighbors(current_node):
+            if neighbor not in visited:
+                new_cost = current_cost + 1  # Asignamos un costo uniforme de 1 a cada movimiento
+                if neighbor not in costs or new_cost < costs[neighbor]:
+                    costs[neighbor] = new_cost
+                    parent[neighbor] = current_node
+                    heapq.heappush(queue, (new_cost, neighbor))
+        
+        arbol[current_node] = list(graph.neighbors(current_node))  # Actualizar el árbol con los vecinos
+        actualizar_arbol_callback(arbol)  # Llamada de actualización visual
+
+    return None, visited, parent
