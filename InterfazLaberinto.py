@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import messagebox
 from PIL import Image, ImageTk
 from estrategias import buscar_ruta
+from busquedas import buscar_amplitud, costo_uniforme, iterativa
 import time
 
 class InterfazLaberinto:
@@ -10,85 +11,82 @@ class InterfazLaberinto:
         self.root.title("Configuración del Laberinto")
         self.root.geometry("1400x800")
 
-        # Frame principal que contiene todo
-        self.frame_principal = tk.Frame(root)
-        self.frame_principal.pack(fill=tk.BOTH, expand=True)
+        # Calcular el ancho de cada mitad
+        mitad_ancho = 1400 // 2
 
-        # Frame izquierdo para el canvas del árbol
-        self.frame_izquierdo = tk.Frame(self.frame_principal, width=600)
-        self.frame_izquierdo.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        # Frame izquierdo (mitad izquierda de la pantalla)
+        self.frame_izquierdo = tk.Frame(root, width=mitad_ancho, height=800, bg="#f7f2f2")
+        self.frame_izquierdo.place(x=0, y=0)
 
-        # Label para mostrar la estrategia actual
-        self.label_estrategia = tk.Label(self.frame_izquierdo, text="Estrategia: ", font=("Arial", 14))
-        self.label_estrategia.pack(pady=10)
+        self.label_estrategia = tk.Label(self.frame_izquierdo, text="Estrategia: ", font=("Arial", 14), bg="#f7f2f2")
+        self.label_estrategia.place(x=20, y=20)
 
-        # Canvas para el árbol de búsqueda
-        self.canvas_arbol = tk.Canvas(self.frame_izquierdo, width=600, height=670)
-        self.canvas_arbol.pack(fill=tk.BOTH, expand=True)
+        self.canvas_arbol = tk.Canvas(self.frame_izquierdo, width=mitad_ancho-40, height=700, bg="#f7f2f2")
+        self.canvas_arbol.place(x=20, y=60)
 
-        # Frame derecho para los controles y la matriz
-        self.frame_derecho = tk.Frame(self.frame_principal)
-        self.frame_derecho.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
+        # Frame derecho (mitad derecha de la pantalla)
+        self.frame_derecho = tk.Frame(root, width=mitad_ancho, height=800, bg="#f7f2f2")
+        self.frame_derecho.place(x=mitad_ancho, y=0)
 
-        # Frame para la entrada de datos y botones
-        self.frame_entrada = tk.Frame(self.frame_derecho)
-        self.frame_entrada.pack(pady=20)
+        # Frame de entrada en la parte superior del frame derecho
+        self.frame_entrada = tk.Frame(self.frame_derecho, width=mitad_ancho, height=260, bg="#f7f2f2")
+        self.frame_entrada.place(x=0, y=0)
 
-        tk.Label(self.frame_entrada, text="Ingrese el tamaño del laberinto (filas,columnas):", font=("Arial", 12)).pack()
+        tk.Label(self.frame_entrada, text="Ingrese el tamaño del laberinto (M,N):", font=("Arial", 12, "bold"), bg="#f7f2f2").place(x=20, y=20)
+        self.entrada_tamano = tk.Entry(self.frame_entrada, font=("Arial", 12), width=10)
+        self.entrada_tamano.place(x=310, y=20)
 
-        self.entrada_tamano = tk.Entry(self.frame_entrada, font=("Arial", 12), width=20)
-        self.entrada_tamano.pack(pady=5)
+        tk.Label(self.frame_entrada, text="Nodos de expansión:", font=("Arial", 12, "bold"), bg="#f7f2f2").place(x=20, y=60)
+        self.entrada_nodos = tk.Entry(self.frame_entrada, font=("Arial", 12), width=10)
+        self.entrada_nodos.place(x=310, y=60)
 
-        self.boton_tamano = tk.Button(self.frame_entrada, text="Crear Laberinto", command=self.crear_matriz, font=("Arial", 12))
-        self.boton_tamano.pack(pady=10)
+        self.boton_tamano = tk.Button(self.frame_entrada, text="Crear Laberinto", command=self.crear_matriz, font=("Arial", 11, "bold"), width=15, bg="#353131", fg="white")
+        self.boton_tamano.place(x=420, y=20)
 
-        self.boton_obstaculo = tk.Button(self.frame_entrada, text="Activar Modo Obstáculo", command=self.modo_obstaculo, font=("Arial", 12))
-        self.boton_obstaculo.pack(pady=10)
+        self.boton_buscar = tk.Button(self.frame_entrada, text="Iniciar Búsqueda", command=self.iniciar_busqueda, font=("Arial", 11, "bold"), width=15, bg="#3b8d21", fg="white")
+        self.boton_buscar.place(x=420, y=60)
 
-        self.boton_queso = tk.Button(self.frame_entrada, text="Poner Queso", command=self.modo_queso, font=("Arial", 12))
-        self.boton_queso.pack(pady=10)
+        self.boton_obstaculo = tk.Button(self.frame_entrada, text="Activar Modo Obstáculo", command=self.modo_obstaculo, font=("Arial", 11, "bold"), bg="#353131", fg="white")
+        self.boton_obstaculo.place(x=20, y=110)
+        
+        self.boton_queso = tk.Button(self.frame_entrada, text="Poner Queso", command=self.modo_queso, font=("Arial", 11, "bold"), bg="#353131", fg="white")
+        self.boton_queso.place(x=230, y=110)
 
-        self.boton_raton = tk.Button(self.frame_entrada, text="Colocar Ratón", command=self.modo_raton, font=("Arial", 12))
-        self.boton_raton.pack(pady=10)
+        self.boton_raton = tk.Button(self.frame_entrada, text="Colocar Ratón", command=self.modo_raton, font=("Arial", 11, "bold"), bg="#353131", fg="white")
+        self.boton_raton.place(x=370, y=110)
 
-        self.boton_generar = tk.Button(self.frame_entrada, text="Generar Laberinto txt", command=self.generar_laberinto, font=("Arial", 12))
-        self.boton_generar.pack(pady=10)
+        self.boton_limpiar = tk.Button(self.frame_entrada, text="Limpiar Laberinto", command=self.limpiar_matriz, font=("Arial", 11, "bold"), bg="#353131", fg="white")
+        self.boton_limpiar.place(x=20, y=150)
+        
+        self.label_metodos = tk.Label(self.frame_entrada, text="Seleccione el método de búsqueda:", font=("Arial", 12, "bold"), bg="#f7f2f2").place(x=20, y=190)
+        
+        self.boton_amplitud = tk.Button(self.frame_entrada, text="Amplitud", command=self.busquedadAmplitud, font=("Arial", 11, "bold"), bg="#353131", fg="white")
+        self.boton_amplitud.place(x=20, y=215)
+        
+        self.boton_costo = tk.Button(self.frame_entrada, text="costo", command=self.busquedadCosto, font=("Arial", 11, "bold"), bg="#353131", fg="white")
+        self.boton_costo.place(x=120, y=215)
+        
+        self.boton_iterativa = tk.Button(self.frame_entrada, text="Iterativa", command=self.busquedadIterativa, font=("Arial", 11, "bold"), bg="#353131", fg="white")
+        self.boton_iterativa.place(x=195, y=215)
+        
+        self.boton_profundidad = tk.Button(self.frame_entrada, text="Profundidad", command=self.busquedadProfundida, font=("Arial", 11, "bold"), bg="#353131", fg="white")
+        self.boton_profundidad.place(x=285, y=215)
 
-        tk.Label(self.frame_entrada, text="Nodos de expansión:", font=("Arial", 12)).pack()
-        self.entrada_nodos = tk.Entry(self.frame_entrada, font=("Arial", 12), width=20)
-        self.entrada_nodos.pack(pady=5)
 
-        self.boton_buscar = tk.Button(self.frame_entrada, text="Iniciar Búsqueda", command=self.iniciar_busqueda, font=("Arial", 12))
-        self.boton_buscar.pack(pady=10)
-
-        # Botón para limpiar la matriz
-        self.boton_limpiar = tk.Button(self.frame_entrada, text="Limpiar", command=self.limpiar_matriz, font=("Arial", 12))
-        self.boton_limpiar.place(x=self.boton_buscar.winfo_x() + self.boton_buscar.winfo_width() + 260, y=self.boton_buscar.winfo_y()+390)
-
-        self.nodos_expandidos = tk.IntVar(value=0)
-        self.label_nodos = tk.Label(root, textvariable=self.nodos_expandidos)
-        self.label_nodos.pack()
-
-        # Frame que contendrá el canvas con scroll
-        self.frame_matriz_con_scroll = tk.Frame(self.frame_derecho)
-        self.frame_matriz_con_scroll.pack(pady=20, fill=tk.BOTH, expand=True)
+        # Frame para la matriz en la parte inferior del frame derecho
+        self.frame_matriz = tk.Frame(self.frame_derecho, width=mitad_ancho, height=540, bg="#f7f2f2")
+        self.frame_matriz.place(x=200, y=280)
 
         # Canvas para la matriz
-        self.canvas_matriz = tk.Canvas(self.frame_matriz_con_scroll)
-        self.canvas_matriz.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        self.canvas_matriz = tk.Canvas(self.frame_matriz, width=mitad_ancho-20, height=540, bg="#f7f2f2")
+        self.canvas_matriz.place(x=10, y=10)
 
-        # Scrollbar
-        self.scrollbar_vertical = tk.Scrollbar(self.frame_matriz_con_scroll, orient=tk.VERTICAL, command=self.canvas_matriz.yview)
-        self.scrollbar_vertical.pack(side=tk.RIGHT, fill=tk.Y)
-
-        self.canvas_matriz.configure(yscrollcommand=self.scrollbar_vertical.set)
-
-        # Crear un frame dentro del canvas para la matriz
-        self.frame_matriz = tk.Frame(self.canvas_matriz)
-        self.canvas_matriz.create_window((0, 0), window=self.frame_matriz, anchor="nw")
+        # Frame dentro del canvas para la matriz
+        self.frame_matriz_dentro_canvas = tk.Frame(self.canvas_matriz)
+        self.canvas_matriz.create_window((0, 0), window=self.frame_matriz_dentro_canvas, anchor="nw")
 
         # Vincular el tamaño del canvas con el contenido del frame de la matriz
-        self.frame_matriz.bind("<Configure>", lambda e: self.canvas_matriz.configure(scrollregion=self.canvas_matriz.bbox("all")))
+        self.frame_matriz_dentro_canvas.bind("<Configure>", lambda e: self.canvas_matriz.configure(scrollregion=self.canvas_matriz.bbox("all")))
 
         self.matriz = None
         self.modo_obstaculo_activo = False
@@ -104,6 +102,7 @@ class InterfazLaberinto:
         self.imagen_raton = Image.open("raton.png")
         self.imagen_raton = self.imagen_raton.resize((50, 50))
         self.imagen_raton = ImageTk.PhotoImage(self.imagen_raton)
+
 
     def crear_matriz(self):
         tamano = self.entrada_tamano.get()
@@ -140,6 +139,80 @@ class InterfazLaberinto:
         self.nodos_expandidos.set(0)
         messagebox.showinfo("Limpiar Matriz", "Todas las celdas han sido limpiadas.")
 
+    def busquedadAmplitud(self):
+        #aqui poner la funcion de generar laberinto
+        self.generar_laberinto()
+        nodos_expandir = int(self.entrada_nodos.get())
+        
+        def run_search():
+            ruta = buscar_amplitud(
+                self.matriz,
+                self.posicion_raton,
+                self.posicion_queso,
+                self.actualizar_arbol,
+                self.actualizar_estrategia,
+                nodos_expandir
+            )
+            
+            if ruta:
+                self.pintar_ruta(ruta)
+                messagebox.showinfo("Éxito", "Ruta encontrada: " + str(ruta))
+            else:
+                messagebox.showwarning("Fallo", "No se encontró una ruta.")
+
+        # Ejecutamos la búsqueda en un hilo separado
+        self.root.after(0, run_search)
+      
+    def busquedadCosto(self):
+        #aqui poner la funcion de generar laberinto
+        self.generar_laberinto()
+        nodos_expandir = int(self.entrada_nodos.get())
+        
+        def run_search():
+            ruta = costo_uniforme(
+                self.matriz,
+                self.posicion_raton,
+                self.posicion_queso,
+                self.actualizar_arbol,
+                self.actualizar_estrategia,
+                nodos_expandir
+            )
+            
+            if ruta:
+                self.pintar_ruta(ruta)
+                messagebox.showinfo("Éxito", "Ruta encontrada: " + str(ruta))
+            else:
+                messagebox.showwarning("Fallo", "No se encontró una ruta.")
+
+        # Ejecutamos la búsqueda en un hilo separado
+        self.root.after(0, run_search)
+        
+    def busquedadIterativa(self):
+        #aqui poner la funcion de generar laberinto
+        self.generar_laberinto()
+        nodos_expandir = int(self.entrada_nodos.get())
+        
+        def run_search():
+            ruta = iterativa(
+                self.matriz,
+                self.posicion_raton,
+                self.posicion_queso,
+                self.actualizar_arbol,
+                self.actualizar_estrategia,
+                nodos_expandir
+            )
+            
+            if ruta:
+                self.pintar_ruta(ruta)
+                messagebox.showinfo("Éxito", "Ruta encontrada: " + str(ruta))
+            else:
+                messagebox.showwarning("Fallo", "No se encontró una ruta.")
+
+        # Ejecutamos la búsqueda en un hilo separado
+        self.root.after(0, run_search)   
+    
+    def busquedadProfundida(self):
+        messagebox.showinfo("Profundidad", "Profundidad")
 
 
     def accion_celda(self, fila, columna):
@@ -168,31 +241,19 @@ class InterfazLaberinto:
         self.modo_obstaculo_activo = not self.modo_obstaculo_activo
         self.modo_queso_activo = False
         self.modo_raton_activo = False
-        if self.modo_obstaculo_activo:
-            self.boton_obstaculo.config(text="Desactivar Modo Obstáculo")
-            messagebox.showinfo("Modo Obstáculo", "Haz clic en una celda para colocar un obstáculo.")
-        else:
-            self.boton_obstaculo.config(text="Activar Modo Obstáculo")
+       
 
     def modo_queso(self):
         self.modo_queso_activo = not self.modo_queso_activo
         self.modo_obstaculo_activo = False
         self.modo_raton_activo = False
-        if self.modo_queso_activo:
-            self.boton_queso.config(text="Desactivar Modo Queso")
-            messagebox.showinfo("Modo Queso", "Haz clic en una celda para colocar el queso.")
-        else:
-            self.boton_queso.config(text="Poner Queso")
+        
 
     def modo_raton(self):
         self.modo_raton_activo = not self.modo_raton_activo
         self.modo_obstaculo_activo = False
         self.modo_queso_activo = False
-        if self.modo_raton_activo:
-            self.boton_raton.config(text="Desactivar Modo Ratón")
-            messagebox.showinfo("Modo Ratón", "Haz clic en una celda para colocar el ratón.")
-        else:
-            self.boton_raton.config(text="Colocar Ratón")
+ 
 
     def generar_laberinto(self):
         with open("laberinto.txt", "w") as f:
@@ -200,7 +261,7 @@ class InterfazLaberinto:
             for i in range(filas):
                 f.write(" ".join(map(str, self.matriz[i])) + "\n")
 
-        messagebox.showinfo("Éxito", "Laberinto guardado como laberinto.txt")
+        #messagebox.showinfo("Éxito", "Laberinto guardado como laberinto.txt")
         
     def actualizar_arbol(self, imagen):
         photo = ImageTk.PhotoImage(imagen)
@@ -222,6 +283,8 @@ class InterfazLaberinto:
         self.root.after(0, update)
 
     def iniciar_busqueda(self):
+        #aqui poner la funcion de generar laberinto
+        self.generar_laberinto()
         nodos_expandir = int(self.entrada_nodos.get())
         
         def run_search():

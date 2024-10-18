@@ -7,7 +7,7 @@ from PIL import Image, ImageTk
 import time
 import random
 import heapq
-
+resul = []
 def cargar_matriz(archivo):
     with open(archivo, 'r') as f:
         matriz = [list(map(int, line.strip().split())) for line in f]
@@ -99,8 +99,8 @@ def busquedad_por_amplitud(matriz, nodo_inicial, posicion_queso, arbol, actualiz
 
 
 # Busquedad por profundización iterativa --------------------------------------------------------------------------------------------
-# Aqui cae en bucle infinito 
-def Profundidad_Iteractiva(matriz, nodo_inicial, posicion_queso, arbol, actualizar_arbol_callback, actualizar_estrategia_callback, nodos_expandir, visited=None, parent=None):
+# solucionar despues cae en bucle cuando va despues de otra estrategia
+def buquedad_profundidad_iteractiva(matriz, nodo_inicial, posicion_queso, arbol, actualizar_arbol_callback, actualizar_estrategia_callback, nodos_expandir, visited=None, parent=None):
     filas, columnas = len(matriz), len(matriz[0])
     graph = nx.grid_2d_graph(filas, columnas)
 
@@ -291,7 +291,8 @@ def buscar_ruta(matriz, posicion_raton, posicion_queso, actualizar_arbol_callbac
             print(f"Resultado de la estrategia {nombre_estrategia}: {resultado}")
             if resultado[-1] == posicion_queso:
                 path.extend(resultado[1:])  # Agregar todos los nodos visitados a la ruta
-                return path
+                #return path 
+                return resultado
             else:
                 nodo_actual = resultado[-1]  # Actualizar el nodo actual para la próxima iteración
                 print(f"Nuevo nodo actual: {nodo_actual}")  # Aquí se actualiza el nodo raíz
@@ -304,8 +305,6 @@ def buscar_ruta(matriz, posicion_raton, posicion_queso, actualizar_arbol_callbac
         print(f"Nodos visitados hasta ahora: {visited}")
 
     return None
-
-
 
 
 if __name__ == "__main__":
