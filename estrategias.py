@@ -1,7 +1,7 @@
 import networkx as nx
 from collections import deque
 import matplotlib.pyplot as plt
-import pygraphviz as pgv
+import pygraphviz as pgv 
 from io import BytesIO
 from PIL import Image, ImageTk
 import time
@@ -180,13 +180,15 @@ def Profundidad_Iteractiva(matriz, nodo_inicial, posicion_queso, arbol, actualiz
 
 # Busqueda por costo uniforme --------------------------------------------------------------------------------------
 
+
 def busqueda_por_costo_uniforme(matriz, nodo_inicial, posicion_queso, arbol, actualizar_arbol_callback, actualizar_estrategia_callback, nodos_expandir, visited, parent):
     filas, columnas = len(matriz), len(matriz[0])
     graph = nx.grid_2d_graph(filas, columnas)
 
+    # Eliminar nodos que son obstáculos en la matriz
     for i in range(filas):
         for j in range(columnas):
-            if matriz[i][j] == 1:
+            if matriz[i][j] == 1:  # Suponemos que 1 es un obstáculo
                 graph.remove_node((i, j))
 
     # Usamos un min-heap para almacenar los nodos con sus costos
@@ -195,52 +197,71 @@ def busqueda_por_costo_uniforme(matriz, nodo_inicial, posicion_queso, arbol, act
     costs = {nodo_inicial: 0}
     count = 0
 
+    # Ejecutamos la búsqueda hasta que la cola esté vacía o se alcancen los nodos máximos a expandir
     while queue and count < nodos_expandir:
         current_cost, current_node = heapq.heappop(queue)
 
+        # Si el nodo ya ha sido visitado, lo saltamos
         if current_node in visited:
+            print(f"El nodo {current_node} ya fue visitado, continuando con el siguiente.")
             continue
-        
+
+        print(f"Procesando nodo: {current_node} con costo acumulado: {current_cost}")
+
+        # Marcamos el nodo como visitado
         visited.add(current_node)
 
+        # Verificamos si hemos llegado al queso
         if current_node == posicion_queso:
+            print("Se ha encontrado el queso en el nodo:", current_node)
             path = []
             while current_node is not None:
                 path.append(current_node)
-                current_node = parent[current_node]
+                current_node = parent.get(current_node)
             img = dibujar_arbol(arbol, None, path=path[::-1])
             actualizar_arbol_callback(img)
             return path[::-1], visited, parent
 
-        # Actualizar el árbol con el nodo actual
+        # Si el nodo actual no está en el árbol, lo inicializamos
         if current_node not in arbol:
             arbol[current_node] = []
 
         # Obtener los vecinos del nodo actual
         vecinos = list(graph.neighbors(current_node))
+        print(f"Vecinos de {current_node}: {vecinos}")
 
         for neighbor in vecinos:
             if neighbor not in visited:
                 # Supongamos que el costo para moverse a un vecino es 1
                 new_cost = current_cost + 1
-                
+
                 # Solo añadir al heap si el nuevo costo es mejor
                 if neighbor not in costs or new_cost < costs[neighbor]:
+                    print(f"Actualizando vecino {neighbor}, nuevo costo: {new_cost}, padre: {current_node}")
                     costs[neighbor] = new_cost
                     parent[neighbor] = current_node
                     arbol[current_node].append(neighbor)
                     heapq.heappush(queue, (new_cost, neighbor))
 
-                    # Dibuja el árbol en la profundidad actual
+                    # Dibujar el árbol con el nodo actual y los vecinos
                     img = dibujar_arbol(arbol, current_node)
                     actualizar_arbol_callback(img)
-                    time.sleep(0.5)
+                    time.sleep(0.5)  # Pausa para visualizar el dibujo del árbol
 
+                    # Contador para limitar el número de nodos expandidos
                     count += 1
-                    if count >= nodos_expandir:
+                    if count == nodos_expandir:
+                        nodo_inicial = neighbor
+                      
                         break
+            else:
+                print(f"Vecino {neighbor} ya visitado, saltando.")
 
+    # Si no se encuentra el queso, devolvemos el nodo inicial como camino
+    print("No se encontró una ruta al queso.")
     return [nodo_inicial], visited, parent
+
+
 
 
 def buscar_ruta(matriz, posicion_raton, posicion_queso, actualizar_arbol_callback, actualizar_estrategia_callback, nodos_expandir):
@@ -261,21 +282,30 @@ def buscar_ruta(matriz, posicion_raton, posicion_queso, actualizar_arbol_callbac
         nombre_estrategia = estrategia.__name__.capitalize()
         actualizar_estrategia_callback(nombre_estrategia)
         print(f"Estrategia actual: {nombre_estrategia}")
+        print(f"Nodo actual antes de la estrategia: {nodo_actual}")
         
         # Pasamos `parent` para que las estrategias mantengan el árbol de padres correctamente
         resultado, visited, parent = estrategia(matriz, nodo_actual, posicion_queso, arbol, actualizar_arbol_callback, actualizar_estrategia_callback, nodos_expandir, visited, parent)
         
         if resultado:
+            print(f"Resultado de la estrategia {nombre_estrategia}: {resultado}")
             if resultado[-1] == posicion_queso:
                 path.extend(resultado[1:])  # Agregar todos los nodos visitados a la ruta
                 return path
             else:
-                path.append(resultado[-1])  # Agregar solo el último nodo visitado
                 nodo_actual = resultado[-1]  # Actualizar el nodo actual para la próxima iteración
+                print(f"Nuevo nodo actual: {nodo_actual}")  # Aquí se actualiza el nodo raíz
+                path.append(nodo_actual)  # Agregar el último nodo expandido al camino
         else:
+            print("No se pudo encontrar una ruta con la estrategia actual. Continuando con la siguiente.")
             continue
 
+        print(f"Nodo actual después de la estrategia: {nodo_actual}")
+        print(f"Nodos visitados hasta ahora: {visited}")
+
     return None
+
+
 
 
 if __name__ == "__main__":
