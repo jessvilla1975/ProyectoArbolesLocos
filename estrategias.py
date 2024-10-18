@@ -53,7 +53,7 @@ def dibujar_arbol(arbol, nodo_actual, path=[]):
 
 # Busqueda por amplitud --------------------------------------------------------------------------------------------------------------
 
-def amplitud(matriz, nodo_inicial, posicion_queso, arbol, actualizar_arbol_callback, actualizar_estrategia_callback, nodos_expandir, visited, parent):
+def busquedad_por_amplitud(matriz, nodo_inicial, posicion_queso, arbol, actualizar_arbol_callback, actualizar_estrategia_callback, nodos_expandir, visited, parent):
     filas, columnas = len(matriz), len(matriz[0])
     graph = nx.grid_2d_graph(filas, columnas)
 
@@ -97,51 +97,6 @@ def amplitud(matriz, nodo_inicial, posicion_queso, arbol, actualizar_arbol_callb
 
     return [nodo_inicial] + list(queue), visited, parent
 
-
-#estrategia falsa ------------------------------------------------------------------------------------------------
-def estrategiafalsa(matriz, nodo_inicial, posicion_queso, arbol, actualizar_arbol_callback, actualizar_estrategia_callback, nodos_expandir, visited, parent):
-    filas, columnas = len(matriz), len(matriz[0])
-    graph = nx.grid_2d_graph(filas, columnas)
-
-    for i in range(filas):
-        for j in range(columnas):
-            if matriz[i][j] == 1:
-                graph.remove_node((i, j))
-
-    queue = deque([nodo_inicial])
-    count = 1
-
-    while queue and count < nodos_expandir:
-        current_node = queue.popleft()
-        
-        if current_node not in visited:
-            visited.add(current_node)
-
-            for neighbor in graph.neighbors(current_node):
-                if neighbor not in visited and neighbor not in queue:
-                    queue.append(neighbor)
-                    parent[neighbor] = current_node  # Actualizamos el parent
-                    if current_node in arbol:
-                        arbol[current_node].append(neighbor)
-                    else:
-                        arbol[current_node] = [neighbor]
-
-                    img = dibujar_arbol(arbol, neighbor)
-                    actualizar_arbol_callback(img)
-                    time.sleep(0.5)
-
-            count += 1
-
-            if current_node == posicion_queso:
-                path = []
-                while current_node is not None:
-                    path.append(current_node)
-                    current_node = parent[current_node]
-                img = dibujar_arbol(arbol, None, path=path[::-1])
-                actualizar_arbol_callback(img)
-                return path[::-1], visited, parent  # Devolvemos `parent` actualizado
-
-    return [nodo_inicial] + list(queue), visited, parent
 
 # Busquedad por profundización iterativa --------------------------------------------------------------------------------------------
 # Aqui cae en bucle infinito 
@@ -223,11 +178,73 @@ def Profundidad_Iteractiva(matriz, nodo_inicial, posicion_queso, arbol, actualiz
     return None, visited, parent
 
 
+# Busqueda por costo uniforme --------------------------------------------------------------------------------------
 
+def busqueda_por_costo_uniforme(matriz, nodo_inicial, posicion_queso, arbol, actualizar_arbol_callback, actualizar_estrategia_callback, nodos_expandir, visited, parent):
+    filas, columnas = len(matriz), len(matriz[0])
+    graph = nx.grid_2d_graph(filas, columnas)
+
+    for i in range(filas):
+        for j in range(columnas):
+            if matriz[i][j] == 1:
+                graph.remove_node((i, j))
+
+    # Usamos un min-heap para almacenar los nodos con sus costos
+    queue = []
+    heapq.heappush(queue, (0, nodo_inicial))  # (costo, nodo)
+    costs = {nodo_inicial: 0}
+    count = 0
+
+    while queue and count < nodos_expandir:
+        current_cost, current_node = heapq.heappop(queue)
+
+        if current_node in visited:
+            continue
+        
+        visited.add(current_node)
+
+        if current_node == posicion_queso:
+            path = []
+            while current_node is not None:
+                path.append(current_node)
+                current_node = parent[current_node]
+            img = dibujar_arbol(arbol, None, path=path[::-1])
+            actualizar_arbol_callback(img)
+            return path[::-1], visited, parent
+
+        # Actualizar el árbol con el nodo actual
+        if current_node not in arbol:
+            arbol[current_node] = []
+
+        # Obtener los vecinos del nodo actual
+        vecinos = list(graph.neighbors(current_node))
+
+        for neighbor in vecinos:
+            if neighbor not in visited:
+                # Supongamos que el costo para moverse a un vecino es 1
+                new_cost = current_cost + 1
+                
+                # Solo añadir al heap si el nuevo costo es mejor
+                if neighbor not in costs or new_cost < costs[neighbor]:
+                    costs[neighbor] = new_cost
+                    parent[neighbor] = current_node
+                    arbol[current_node].append(neighbor)
+                    heapq.heappush(queue, (new_cost, neighbor))
+
+                    # Dibuja el árbol en la profundidad actual
+                    img = dibujar_arbol(arbol, current_node)
+                    actualizar_arbol_callback(img)
+                    time.sleep(0.5)
+
+                    count += 1
+                    if count >= nodos_expandir:
+                        break
+
+    return [nodo_inicial], visited, parent
 
 
 def buscar_ruta(matriz, posicion_raton, posicion_queso, actualizar_arbol_callback, actualizar_estrategia_callback, nodos_expandir):
-    estrategias = [Profundidad_Iteractiva]  # Lista de estrategias
+    estrategias = [busqueda_por_costo_uniforme, busquedad_por_amplitud]  # Lista de estrategias
     arbol = {posicion_raton: []}
     nodo_actual = posicion_raton
     path = [nodo_actual]
@@ -267,7 +284,7 @@ if __name__ == "__main__":
     if posicion_raton is None or posicion_queso is None:
         print("Error: No se encontró la posición del ratón o del queso.")
     else:
-        nodos_expandir = 6# Este valor puede ser configurado desde la interfaz pongo 6 por pruebas aqui sin interface
+        nodos_expandir = 5# Este valor puede ser configurado desde la interfaz pongo 6 por pruebas aqui sin interface
         ruta = buscar_ruta(matriz, posicion_raton, posicion_queso, lambda x: None, lambda x: None, nodos_expandir)
 
         if ruta:
@@ -275,45 +292,3 @@ if __name__ == "__main__":
         else:
             print("No se encontró una ruta al queso.")
 
-# Busqueda por costo uniforme --------------------------------------------------------------------------------------
-
-def busqueda_por_costo_uniforme(matriz, nodo_inicial, posicion_queso, arbol, actualizar_arbol_callback, actualizar_estrategia_callback, nodos_expandir, visited, parent):
-    filas, columnas = len(matriz), len(matriz[0])
-    graph = nx.grid_2d_graph(filas, columnas)
-
-    for i in range(filas):
-        for j in range(columnas):
-            if matriz[i][j] == 1:  # 1 representa un obstáculo en la matriz
-                graph.remove_node((i, j))
-
-    queue = []
-    heapq.heappush(queue, (0, nodo_inicial))  # (costo_acumulado, nodo)
-    costs = {nodo_inicial: 0}
-    parent[nodo_inicial] = None
-
-    while queue:
-        current_cost, current_node = heapq.heappop(queue)
-
-        if current_node == posicion_queso:
-            path = []
-            while current_node is not None:
-                path.append(current_node)
-                current_node = parent[current_node]
-            path.reverse()
-            return path, visited, parent
-
-        visited.add(current_node)
-
-        # Expandir nodos vecinos
-        for neighbor in graph.neighbors(current_node):
-            if neighbor not in visited:
-                new_cost = current_cost + 1  # Asignamos un costo uniforme de 1 a cada movimiento
-                if neighbor not in costs or new_cost < costs[neighbor]:
-                    costs[neighbor] = new_cost
-                    parent[neighbor] = current_node
-                    heapq.heappush(queue, (new_cost, neighbor))
-        
-        arbol[current_node] = list(graph.neighbors(current_node))  # Actualizar el árbol con los vecinos
-        actualizar_arbol_callback(arbol)  # Llamada de actualización visual
-
-    return None, visited, parent
