@@ -261,11 +261,76 @@ def busqueda_por_costo_uniforme(matriz, nodo_inicial, posicion_queso, arbol, act
     print("No se encontró una ruta al queso.")
     return [nodo_inicial], visited, parent
 
+# Busqueda preferente por profundidad --------------------------------------------------------------------------------------
+def busqueda_preferente_por_profundidad(matriz, nodo_inicial, posicion_queso, arbol, actualizar_arbol_callback, actualizar_estrategia_callback, nodos_expandir, visited, parent):
+    filas, columnas = len(matriz), len(matriz[0])
+    graph = nx.grid_2d_graph(filas, columnas)
+
+    for i in range(filas):
+        for j in range(columnas):
+            if matriz[i][j] == 1:
+                graph.remove_node((i, j))
+
+    stack = [nodo_inicial]
+    count = 0
+
+    while stack and count < nodos_expandir:
+        current_node = stack.pop()
+
+        if current_node not in visited:
+            visited.add(current_node)
+
+            if current_node == posicion_queso:
+                path = []
+                while current_node is not None:
+                    path.append(current_node)
+                    current_node = parent[current_node]
+                img = dibujar_arbol(arbol, None, path=path[::-1])
+                actualizar_arbol_callback(img)
+                return path[::-1], visited, parent
+
+            if current_node not in arbol:
+                arbol[current_node] = []
+
+            # Obtener las coordenadas del nodo actual
+            i, j = current_node
+            
+            # Definir los vecinos en el orden: arriba, derecha, abajo, izquierda
+            # pero al agregarlos al árbol, 'arriba' aparecerá a la izquierda
+            vecinos_ordenados = [
+                (i-1, j),  # arriba
+                (i, j+1),  # derecha
+                (i+1, j),  # abajo
+                (i, j-1)   # izquierda
+            ]
+            
+            # Filtrar solo los vecinos válidos que existen en el grafo
+            vecinos = [v for v in vecinos_ordenados if v in graph.nodes()]
+
+            # Al agregar los vecinos al árbol, los agregamos en orden inverso
+            # para que 'arriba' sea el primero (izquierda en la visualización)
+            for neighbor in reversed(vecinos):
+                if neighbor not in visited:
+                    stack.append(neighbor)
+                    parent[neighbor] = current_node
+                    # Insertamos al principio de la lista para que 'arriba' aparezca
+                    # a la izquierda en la visualización del árbol
+                    arbol[current_node].insert(0, neighbor)
+
+                    img = dibujar_arbol(arbol, current_node)
+                    actualizar_arbol_callback(img)
+                    time.sleep(0.5)
+
+                    count += 1
+                    if count >= nodos_expandir:
+                        break
+
+    return [nodo_inicial] + list(stack), visited, parent
 
 
 
 def buscar_ruta(matriz, posicion_raton, posicion_queso, actualizar_arbol_callback, actualizar_estrategia_callback, nodos_expandir):
-    estrategias = [busqueda_por_costo_uniforme, busquedad_por_amplitud]  # Lista de estrategias
+    estrategias = [busqueda_por_costo_uniforme, busquedad_por_amplitud, busqueda_preferente_por_profundidad]  # Lista de estrategias
     arbol = {posicion_raton: []}
     nodo_actual = posicion_raton
     path = [nodo_actual]

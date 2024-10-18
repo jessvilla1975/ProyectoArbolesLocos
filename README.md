@@ -3,7 +3,7 @@
 
 
 ## Instalaciones
-S
+
 Se describen las bibliotecas utilizadas, sus funciones y los comandos necesarios para su instalación.
 
 ## Bibliotecas Utilizadas

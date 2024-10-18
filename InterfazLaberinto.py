@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import messagebox
 from PIL import Image, ImageTk
 from estrategias import buscar_ruta
-from busquedas import buscar_amplitud, costo_uniforme, iterativa
+from busquedas import buscar_amplitud, costo_uniforme, iterativa, preferente_profundidad
 import time
 
 class InterfazLaberinto:
@@ -212,7 +212,28 @@ class InterfazLaberinto:
         self.root.after(0, run_search)   
     
     def busquedadProfundida(self):
-        messagebox.showinfo("Profundidad", "Profundidad")
+        #aqui poner la funcion de generar laberinto
+        self.generar_laberinto()
+        nodos_expandir = int(self.entrada_nodos.get())
+        
+        def run_search():
+            ruta = preferente_profundidad(
+                self.matriz,
+                self.posicion_raton,
+                self.posicion_queso,
+                self.actualizar_arbol,
+                self.actualizar_estrategia,
+                nodos_expandir
+            )
+            
+            if ruta:
+                self.pintar_ruta(ruta)
+                messagebox.showinfo("Éxito", "Ruta encontrada: " + str(ruta))
+            else:
+                messagebox.showwarning("Fallo", "No se encontró una ruta.")
+
+        # Ejecutamos la búsqueda en un hilo separado
+        self.root.after(0, run_search)
 
 
     def accion_celda(self, fila, columna):
