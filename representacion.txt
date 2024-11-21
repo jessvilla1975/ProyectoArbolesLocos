@@ -1,0 +1,5 @@
+0 representa una celda vacía.
+1 representa un obstáculo.
+2 representa la posición del ratón.
+3 representa la posición del queso.
+4 representa ratonera 
